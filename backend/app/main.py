@@ -25,7 +25,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.frontend_origin],
-        allow_credentials=False,
+        allow_credentials=True,  # the browser must send the login cookie to the API
         allow_methods=["*"],
         allow_headers=["*"],
     )

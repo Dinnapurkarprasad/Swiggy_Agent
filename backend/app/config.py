@@ -24,6 +24,12 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://postgres:postgres@localhost:5432/swiggy_party"
     )
 
+    # Host sign-in with Google. The client id is public; it is not the Gemini API key.
+    google_oauth_client_id: str | None = None
+    # Signs our own login cookie. Changing it logs every host out.
+    session_secret: SecretStr | None = None
+    session_days: int = 7
+
     # Swiggy
     swiggy_mode: SwiggyMode = SwiggyMode.MOCK
     swiggy_mcp_url: str = "https://mcp.swiggy.com/food"

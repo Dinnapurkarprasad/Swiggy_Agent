@@ -27,20 +27,21 @@ Hosting a party means asking every guest what they eat: veg, Jain, halal, allerg
 **Non-goals (for now)**
 - Splitting the bill between guests.
 - Alcohol, groceries (Instamart), or table booking (Dineout).
-- User accounts / login (beyond the host's Swiggy OAuth).
+- Guest accounts / login. Hosts sign in with Google; guests never log in.
 - Mobile app (web only, mobile-friendly).
 
 ## 3. Users
 
-- **Host**: creates the party, reviews plans, approves, pays (COD/UPI on their Swiggy account).
+- **Host**: signs in with Google (first sign-in = sign-up), creates the party, reviews plans, approves, pays (COD/UPI on their Swiggy account). Connects Swiggy (phone + OTP) only when ordering.
 - **Guest**: opens the shared link and fills the form. No account needed.
+
+Why two logins for the host: Swiggy OAuth only authorizes ordering on the host's account and returns no profile, so it can't identify the host. Google sign-in does that.
 
 ## 4. User flow
 
 ```
-Host creates party ──► gets 2 links
-   • Guest link (public): fill the form
-   • Host link (secret): dashboard
+Host signs in with Google ──► creates party ──► gets the guest link (public) to share
+   • Dashboard: host's own parties, visible only when signed in
         │
 Guests submit form ──► host sees live responses
         │
@@ -166,7 +167,7 @@ Known constraints:
 - **One restaurant per cart.** Switching restaurant clears the cart. Multi-restaurant plans = multiple sequential orders.
 - **₹1000 cap per order.** See 9.1. This is a hard rule for the planner.
 - **`place_food_order` is not idempotent (COD).** On error, check `get_food_orders` before retrying.
-- **Auth**: host connects their Swiggy account via OAuth 2.1. Tokens stored server-side, encrypted. Never sent to the frontend.
+- **Auth**: host connects their Swiggy account via OAuth 2.1 (PKCE, phone + OTP). Tokens stored server-side, encrypted. Never sent to the frontend. This authorizes ordering only; host identity comes from Google sign-in.
 - **Partial failure**: if one order fails after another succeeded, tell the host clearly and suggest a replacement restaurant for the affected guests.
 
 ### 9.1 The ₹1000 per-order cap
@@ -242,7 +243,7 @@ swiggy-party-agent/
 ├── frontend/              # Next.js app
 │   └── app/
 │       ├── p/[partyId]/        # guest form
-│       └── host/[hostToken]/   # host dashboard
+│       └── host/               # host dashboard (Google sign-in)
 └── backend/
     ├── app/
     │   ├── api/           # FastAPI routes
@@ -256,7 +257,8 @@ swiggy-party-agent/
 
 ## 12. Data model (initial)
 
-- **Party**: id, name, date, address_id, budget_per_person, rsvp_deadline, host_token, status
+- **User** (host): id, google_sub, email, name
+- **Party**: id, host_user_id, name, date, address_id, budget_per_person, rsvp_deadline, status
 - **GuestResponse**: id, party_id, name, plus_ones, kids, food_type, restrictions[], allergies[], spice, cuisines[], fav_dish, beverage, hunger, dessert
 - **Plan**: id, party_id, label, plan_json, total, savings, status (draft / approved / rejected)
 - **Order**: id, plan_id, restaurant_id, swiggy_order_id, total (≤ ₹1000), payment_method (cod / upi), payment_status, status, eta
@@ -265,15 +267,20 @@ swiggy-party-agent/
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/parties` | Create party, return guest + host links |
+| POST | `/auth/google` | Host signs in with Google ID token; sets login cookie |
+| GET | `/auth/me` | Current host |
+| POST | `/auth/logout` | Clear login cookie |
+| POST | `/parties` | Create party (signed in), return guest link |
 | GET | `/parties/{id}` | Public party info for the guest form |
 | POST | `/parties/{id}/responses` | Submit guest form |
-| GET | `/host/{token}` | Host dashboard data (responses + summary) |
-| POST | `/host/{token}/plans/generate` | Start the agent |
-| GET | `/host/{token}/plans` | Get generated plans |
-| POST | `/host/{token}/plans/{planId}/approve` | Approve and place orders |
-| POST | `/host/{token}/plans/regenerate` | Regenerate with feedback |
-| GET | `/host/{token}/orders` | Order status + ETA |
+| GET | `/host/parties/{id}` | Host dashboard data (responses + summary) |
+| POST | `/host/parties/{id}/plans/generate` | Start the agent |
+| GET | `/host/parties/{id}/plans` | Get generated plans |
+| POST | `/host/parties/{id}/plans/{planId}/approve` | Approve and place orders |
+| POST | `/host/parties/{id}/plans/regenerate` | Regenerate with feedback |
+| GET | `/host/parties/{id}/orders` | Order status + ETA |
+
+All `/host/...` routes require sign-in and that the signed-in user owns the party.
 | GET | `/swiggy/oauth/start`, `/swiggy/oauth/callback` | Connect host's Swiggy account |
 
 ## 14. Milestones

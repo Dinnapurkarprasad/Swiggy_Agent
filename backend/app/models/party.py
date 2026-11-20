@@ -27,9 +27,8 @@ class Party(SQLModel, table=True):
 
     rsvp_deadline: datetime | None = Field(default=None, sa_type=sa.DateTime(timezone=True))
 
-    # SHA-256 of the secret host link token. The raw token is shown to the host once and
-    # never stored, so a database leak doesn't expose working host links.
-    host_token_hash: str = Field(max_length=64, unique=True, index=True)
+    # The signed-in host who created this party. Deleting the user deletes their parties.
+    host_user_id: uuid.UUID = Field(foreign_key="app_user.id", index=True, ondelete="CASCADE")
 
     status: PartyStatus = Field(default=PartyStatus.COLLECTING, sa_type=enum_column(PartyStatus))
 

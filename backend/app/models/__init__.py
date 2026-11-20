@@ -3,5 +3,6 @@
 
 from app.models.guest import GuestResponse
 from app.models.party import Party
+from app.models.user import User
 
-__all__ = ["GuestResponse", "Party"]
+__all__ = ["GuestResponse", "Party", "User"]

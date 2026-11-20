@@ -4,7 +4,7 @@ Guidance for Claude (and any coding agent) working in this repo. Read this first
 
 ## 1. What we're building (one paragraph)
 
-The host creates a party and shares a guest link. Each guest fills a short form with their food preferences, with no login needed. A LangGraph agent then reads all the responses, searches Swiggy through the Builders Club MCP, and builds 2–3 meal plans that cover every guest's diet and allergies, with coupons applied. The host approves one plan. The agent then places one Swiggy order per restaurant cart, and **every order must be ≤ ₹1000**. After that it tracks the orders live. The MVP is for small parties of up to ~10 people.
+The host signs in with Google, creates a party and shares a guest link. Each guest fills a short form with their food preferences, with no login needed. A LangGraph agent then reads all the responses, searches Swiggy through the Builders Club MCP, and builds 2–3 meal plans that cover every guest's diet and allergies, with coupons applied. The host approves one plan. The agent then places one Swiggy order per restaurant cart, and **every order must be ≤ ₹1000**. After that it tracks the orders live. The MVP is for small parties of up to ~10 people.
 
 ## 2. Swiggy Builders Club docs — the authoritative source
 
@@ -66,6 +66,7 @@ The PRD (section 9) doesn't mention `get_food_order_details`, `get_food_delivery
 4. **`place_food_order` is not idempotent (COD).** On any error or timeout, call `get_food_orders` to check whether the order went through before retrying. Never blindly retry.
 5. **One restaurant per cart.** Switching restaurant clears the cart, so place orders sequentially. Call `flush_food_cart` before starting each new order.
 6. **Swiggy OAuth tokens stay on the server and are encrypted at rest.** Never send them to the frontend, write them to logs, or include them in LLM prompts.
+   - Host identity comes from **Google sign-in** (`POST /auth/google` → httpOnly `party_session` cookie), not from Swiggy: Swiggy OAuth only authorizes MCP tool access and returns no profile (verified in `/docs/start/authenticate`, 2026-11-20). Every host route checks the logged-in user owns the party.
 7. **Partial failure:** if order 2 fails after order 1 succeeded, stop and tell the host clearly. Suggest a replacement for the affected guests, and never silently re-plan and re-order.
 8. Quantities come from fixed rules in `planner/quantities.py`, not from LLM guesses. See PRD section 7.
 
@@ -107,7 +108,7 @@ swiggy-party-agent/
 ├── frontend/                 # Next.js
 │   └── app/
 │       ├── p/[partyId]/          # guest form (public)
-│       └── host/[hostToken]/     # host dashboard (secret link)
+│       └── host/                 # host dashboard (Google sign-in required)
 └── backend/
     ├── app/
     │   ├── api/        # FastAPI routes
@@ -139,7 +140,7 @@ npm run dev
 npm run lint && npm run build
 ```
 
-Env vars include `SWIGGY_MODE`, `DATABASE_URL`, `LLM_PROVIDER`, `GOOGLE_API_KEY`, `TOKEN_ENCRYPTION_KEY`, and the Swiggy OAuth client settings. Keep a `.env.example` in sync, and never commit `.env`.
+Env vars include `SWIGGY_MODE`, `DATABASE_URL`, `LLM_PROVIDER`, `GOOGLE_API_KEY`, `TOKEN_ENCRYPTION_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `SESSION_SECRET`, and the Swiggy OAuth client settings. Keep a `.env.example` in sync, and never commit `.env`.
 
 ## 8. Coding conventions
 
