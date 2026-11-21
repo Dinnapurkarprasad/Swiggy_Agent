@@ -273,6 +273,7 @@ swiggy-party-agent/
 | POST | `/parties` | Create party (signed in), return guest link |
 | GET | `/parties/{id}` | Public party info for the guest form |
 | POST | `/parties/{id}/responses` | Submit guest form |
+| GET | `/host/parties` | Host's own parties with response counts |
 | GET | `/host/parties/{id}` | Host dashboard data (responses + summary) |
 | POST | `/host/parties/{id}/plans/generate` | Start the agent |
 | GET | `/host/parties/{id}/plans` | Get generated plans |
