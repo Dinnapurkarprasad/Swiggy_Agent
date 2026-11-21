@@ -106,9 +106,21 @@ swiggy-party-agent/
 ├── CLAUDE.md
 ├── Swiggy_Agent_PRD.md
 ├── frontend/                 # Next.js
-│   └── app/
-│       ├── p/[partyId]/          # guest form (public)
-│       └── host/                 # host dashboard (Google sign-in required)
+│   ├── app/                  # routes only (thin pages that compose components)
+│   │   ├── page.tsx              # landing
+│   │   ├── p/[partyId]/          # guest form (public)
+│   │   └── host/                 # host dashboard (Google sign-in required)
+│   ├── components/           # one folder per section, mirroring app/
+│   │   ├── landing/              # for app/page.tsx
+│   │   ├── p/                    # for app/p/...
+│   │   ├── host/                 # for app/host/...
+│   │   └── ui/                   # shadcn components (shadcn installs here)
+│   └── lib/                  # all supporting code
+│       ├── api/                  # pure functions that call the backend (no React)
+│       ├── mutations/            # TanStack Query hooks (queries + mutations) wrapping lib/api/
+│       ├── types/                # all TypeScript types (request/response shapes); never declared in api/ or mutations/
+│       ├── http.ts               # fetch wrapper used only by lib/api/
+│       └── utils.ts              # shadcn cn()
 └── backend/
     ├── app/
     │   ├── api/        # FastAPI routes
@@ -146,6 +158,7 @@ Env vars include `SWIGGY_MODE`, `DATABASE_URL`, `LLM_PROVIDER`, `GOOGLE_API_KEY`
 
 - **Make minimal, targeted changes** and don't touch unrelated logic.
 - **When sharing code, give complete files**, not partial snippets.
+- **Frontend data flow:** component → hook in `lib/mutations/` → function in `lib/api/` → `request()` in `lib/http.ts`. Components never call `lib/api/` or `fetch` directly.
 - **Frontend uses Tailwind classes, never inline styles.** Use shadcn/ui components where they fit, and build mobile-first because guests open the link on their phones.
 - **Python:**
   - Type hints everywhere and Pydantic models at every boundary (API, LLM output, Swiggy responses).
